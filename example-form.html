@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test local d’enrôlement</title>
+<style>
+  body { font: 18px/1.5 system-ui, sans-serif; max-width: 760px; margin: 48px auto; padding: 0 24px; }
+  input { box-sizing: border-box; width: 100%; padding: 12px; font: inherit; }
+  button { margin-top: 16px; padding: 10px 20px; font: inherit; }
+  output { display: block; margin-top: 24px; }
+</style>
+<h1>Test d’enrôlement</h1>
+<p>Ouvrez l’utilitaire, sélectionnez le champ, puis appuyez sur <strong>Ctrl+Alt+E</strong>.
+Présentez trois fois le même doigt en le retirant entre les lectures.</p>
+<form>
+  <label for="fingerprint">Gabarit d’empreinte en Base64</label>
+  <input id="fingerprint" name="fingerprint" autocomplete="off" spellcheck="false" required>
+  <button type="submit">Valider</button>
+</form>
+<output role="status">Aucune validation.</output>
+<p>Ce test reste sur ce PC : aucune donnée n’est envoyée. Rechargez la page pour effacer le champ.</p>
+<script>
+  let submissions = 0;
+  document.querySelector('form').addEventListener('submit', event => {
+    event.preventDefault();
+    const value = document.querySelector('input').value;
+    try {
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) throw Error();
+      const bytes = atob(value).length;
+      document.querySelector('output').textContent = `Validation ${++submissions} : gabarit reçu (${bytes} octets).`;
+    } catch {
+      document.querySelector('output').textContent = 'Base64 invalide : vérifiez le contenu du champ.';
+    }
+  });
+</script>
+</html>
