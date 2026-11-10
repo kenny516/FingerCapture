@@ -1,3 +1,6 @@
+param(
+    [string]$SdkJarPath = (Join-Path $PSScriptRoot '../lib/ZKFingerReader.jar')
+)
 $ErrorActionPreference = 'Stop'
 foreach ($scriptName in @('build.ps1', 'run.ps1')) {
     $syntaxTokens = $null
@@ -5,7 +8,10 @@ foreach ($scriptName in @('build.ps1', 'run.ps1')) {
     [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $scriptName), [ref]$syntaxTokens, [ref]$syntaxErrors) | Out-Null
     if ($syntaxErrors.Count -gt 0) { throw ($syntaxErrors | Out-String) }
 }
-$sdkJar = Join-Path $PSScriptRoot '../lib/ZKFingerReader.jar'
+if (-not (Test-Path -LiteralPath $SdkJarPath -PathType Leaf)) {
+    throw "JAR SDK introuvable : $SdkJarPath. Relancez build.ps1 -SdkJarPath 'C:\chemin\vers\Java\lib\ZKFingerReader.jar' avec le fichier fourni dans le SDK Java. setup.exe ne fournit pas ce chemin au script."
+}
+$sdkJar = (Resolve-Path -LiteralPath $SdkJarPath).Path
 & mvn -B -ntp org.apache.maven.plugins:maven-install-plugin:3.1.3:install-file "-Dfile=$sdkJar" '-DgroupId=com.zkteco.sdk' '-DartifactId=finger-reader' '-Dversion=5.3.0.33' '-Dpackaging=jar' '-DgeneratePom=true'
 if ($LASTEXITCODE -ne 0) { throw 'Installation du JAR SDK impossible.' }
 & mvn -B -ntp -f (Join-Path $PSScriptRoot 'pom.xml') verify

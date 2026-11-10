@@ -6,12 +6,14 @@ L’application fonctionne localement, indépendamment du site utilisé. Elle ne
 
 ## Démarrage rapide
 
-Depuis le dossier `utility` de ce projet, dans PowerShell :
+Après avoir suivi la section [Installation](#installation), depuis la racine du dépôt `FingerCapture`, dans PowerShell :
 
 ```powershell
 .\build.ps1
 .\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64'
 ```
+
+Si le JAR reste dans le dossier du SDK, remplacer la première commande par `./build.ps1 -SdkJarPath 'C:\chemin\vers\Java\lib\ZKFingerReader.jar'`.
 
 Après le lancement, cliquer sur **Commencer**, puis sélectionner le champ du formulaire dans les cinq secondes. Présenter trois fois le même doigt, en le retirant entre les lectures. Les prérequis et les autres options de lancement sont détaillés ci-dessous.
 
@@ -26,6 +28,103 @@ Le nom du projet est **FingerCapture**. Les fichiers construits conservent actue
 
 Le JAR ZKTeco utilise JNI pour accéder à `libzkfp`. Ne pas confondre `libzkfp.dll` avec `libzkfpcsharp.dll`. Le dossier natif doit également contenir ou permettre de trouver les DLL dépendantes et les runtimes exigés par l’installation ZKTeco.
 
+## Installation
+
+### 1. Installer le pilote et les composants du SDK ZKTeco
+
+**Oui, les composants natifs du SDK doivent être installés sur chaque poste qui utilise le lecteur.** Compiler le projet ou ajouter le JAR Java ne les installe pas. Pour développer, il faut aussi récupérer le SDK Java auprès de ZKTeco ou du fournisseur du lecteur.
+
+Pour le paquet **ZKFinger Standard SDK 5.3.0.33**, l’installateur à lancer est **`setup.exe` à la racine du paquet**, intitulé « Fingerprint Reader Standard Driver Setup » (version `5.3.0.33`). C’est le point d’entrée pour installer les composants ZKTeco sur le poste client ; il n’est normalement pas nécessaire de copier les DLL à la main. Java reste un prérequis séparé.
+
+| Élément | Poste de développement | Poste client utilisant le ZIP |
+| --- | --- | --- |
+| Lecteur compatible, pilote et composants natifs ZKTeco | Nécessaires pour tester le matériel | Nécessaires |
+| Java 17 ou supérieur, compatible avec l’architecture des DLL | JDK nécessaire | Environnement Java avec Swing nécessaire |
+| Maven 3.9+ | Nécessaire pour compiler | Inutile |
+| `ZKFingerReader.jar` provenant du SDK Java | À fournir avant la compilation | Inclus dans le paquet construit |
+
+1. Identifier le modèle exact du lecteur et obtenir le pilote Windows et le SDK compatibles auprès du fournisseur. Un capteur intégré reconnu par Windows Hello, par exemple un Goodix, n’est pas automatiquement compatible avec le SDK ZKTeco.
+2. Exécuter l’installateur fourni pour le pilote et les composants natifs, en suivant les instructions du fournisseur. Installer également les runtimes qu’il demande ; redémarrer Windows si l’installateur le demande.
+3. Brancher le lecteur selon les consignes du fournisseur et vérifier son état dans le **Gestionnaire de périphériques**.
+4. Tester le lecteur avec la démonstration fournie dans le SDK, puis la fermer avant de lancer FingerCapture.
+
+La présence de `libzkfp.dll` seule ne garantit pas une installation complète : le moteur biométrique et les dépendances du fournisseur sont également nécessaires. Utiliser un ensemble de composants de même architecture et compatibles entre eux. Ne pas remplacer des DLL système une par une pour contourner une installation incomplète.
+
+### 2. Préparer Java, Maven et le JAR du SDK
+
+Cette étape concerne la compilation depuis les sources. Avec un ZIP déjà construit, passer à [Installer sur un poste client](#installer-sur-un-poste-client).
+
+Installer un JDK 17 ou supérieur et Maven 3.9+, puis vérifier dans un nouveau terminal PowerShell :
+
+```powershell
+java -version
+javac -version
+mvn -version
+java -XshowSettings:properties -version
+```
+
+Vérifier `java.home` et `os.arch` dans la dernière commande : `amd64` correspond à une JVM x64, `x86` à une JVM 32 bits. Maven et VS Code peuvent utiliser une JVM différente ; contrôler également leurs réglages.
+
+Le dépôt ne contient pas le JAR propriétaire du SDK. Indiquer au script son emplacement dans le SDK Java avec `-SdkJarPath` (garder les guillemets si le chemin contient des espaces) :
+
+```powershell
+.\build.ps1 -SdkJarPath 'C:\chemin\vers\ZKFinger Standard SDK 5.3.0.33\Java\lib\ZKFingerReader.jar'
+```
+
+Cette commande utilise directement le fichier du SDK, sans le déplacer. L’installation de `setup.exe` ne configure pas son emplacement pour la compilation.
+
+Pour utiliser `./build.ps1` sans paramètre, le chemin par défaut reste **`../lib/ZKFingerReader.jar` par rapport au dossier du script**. On peut donc aussi préparer cette arborescence en copiant le fichier fourni dans le SDK Java :
+
+```text
+dossier-de-travail/
+├── lib/
+│   └── ZKFingerReader.jar
+└── FingerCapture/
+    ├── build.ps1
+    ├── run.ps1
+    ├── pom.xml
+    └── src/
+```
+
+Le dossier `lib` est donc voisin de `FingerCapture`, pas à l’intérieur du dépôt. Si le dépôt se trouve déjà dans le dossier `Java` du SDK, conserver la même disposition relative. Les DLL natives ne vont pas dans ce dossier `lib` destiné au JAR.
+
+### 3. Compiler et vérifier l’installation
+
+Depuis la racine du dépôt :
+
+```powershell
+Test-Path ..\lib\ZKFingerReader.jar
+.\build.ps1
+.\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64' -CheckSdk
+```
+
+`Test-Path` doit retourner `True`. Remplacer le chemin d’exemple par le dossier réel contenant `libzkfp.dll` et les composants natifs compatibles avec Java. Si l’installation du fournisseur rend déjà les bibliothèques accessibles, utiliser simplement `./run.ps1 -CheckSdk`.
+
+Le paramètre `-NativeDirectory` configure le chemin de recherche de Java et le `PATH` du processus lancé ; **il n’installe ni pilote ni SDK**.
+
+Le diagnostic doit afficher :
+
+```text
+SDK chargé, lecteur ouvert et dimensions lues. Aucune empreinte capturée.
+```
+
+Il n’effectue aucune capture et n’envoie aucune touche. En cas de code `-1` (`ZKFP_ERR_INITLIB`), l’initialisation de la bibliothèque du moteur échoue : vérifier ou réparer les composants natifs avec l’installateur du fournisseur, puis relancer le diagnostic. Ce code seul ne prouve pas que le lecteur est absent. Voir aussi [Dépannage](#dépannage).
+
+Après un diagnostic réussi, lancer `./run.ps1` avec le même `-NativeDirectory` si nécessaire, puis utiliser `example-form.html` pour vérifier les trois lectures et l’insertion.
+
+### Installer sur un poste client
+
+1. Installer Java 17 ou supérieur avec Swing, puis lancer `ZKFinger Standard SDK 5.3.0.33\setup.exe` pour installer les composants ZKTeco. Suivre les consignes de l’installateur et utiliser un lecteur compatible avec ce SDK.
+2. Décompresser entièrement `target/finger-enrollment-1.0.0.zip`, produit par la compilation. Conserver le dossier `lib` du paquet à côté du JAR principal.
+3. Ouvrir PowerShell dans le dossier décompressé et lancer :
+
+```powershell
+.\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64' -CheckSdk
+.\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64'
+```
+
+Le poste client n’a besoin ni de Maven ni des sources. Le ZIP inclut les dépendances Java, mais pas Java lui-même, le pilote ou les DLL natives ZKTeco. Respecter les conditions de redistribution du fournisseur.
+
 ## Bibliothèques et fonctionnement technique
 
 ### Dépendances
@@ -33,8 +132,8 @@ Le JAR ZKTeco utilise JNI pour accéder à `libzkfp`. Ne pas confondre `libzkfp.
 | Composant | Version utilisée | Rôle |
 | --- | --- | --- |
 | Java / Swing | Java 17 minimum | Exécution, interface et aperçu de l’empreinte. |
-| ZKFinger Reader SDK for Java | SDK fourni avec le projet, déclaré `5.3.0.33` dans Maven | Accès au lecteur, acquisition, comparaison et fusion des gabarits. |
-| `ZKFingerReader.jar` | `com.zkteco.sdk:finger-reader:5.3.0.33` | Interface Java du SDK ; fourni dans `Java/lib/` puis installé dans le dépôt Maven local par `build.ps1`. |
+| ZKFinger Reader SDK for Java | SDK à obtenir auprès du fournisseur, déclaré `5.3.0.33` dans Maven | Accès au lecteur, acquisition, comparaison et fusion des gabarits. |
+| `ZKFingerReader.jar` | `com.zkteco.sdk:finger-reader:5.3.0.33` | Interface Java du SDK ; à placer dans `../lib/` puis installée dans le dépôt Maven local par `build.ps1`. |
 | `libzkfp.dll` | Selon l’installation du fournisseur | Bibliothèque native chargée par le JAR ZKTeco via JNI ; elle et ses dépendances doivent être installées sur le poste client. |
 | JNA et JNA Platform | `5.17.0` | Accès aux API Windows pour surveiller la fenêtre active et les touches de modification. |
 | JUnit Jupiter | `5.11.4` | Tests automatisés ; dépendance utilisée uniquement lors des tests. |
@@ -63,28 +162,28 @@ Tous les fichiers principaux se trouvent dans `src/main/java/com/zkteco/enrollme
 | `ZkReader` et `CaptureCycle` | Appels au SDK et gestion des poses successives du doigt. |
 | `WindowsEvents`, `WindowsDesktop` et `GuardedPaste` | Surveillance de la fenêtre active, presse-papiers et insertion clavier contrôlée. |
 
-La documentation du fournisseur se trouve dans `Java/ZKFinger Reader SDK for JAVA_en_V2.pdf`, à côté du dossier `utility`. La démonstration fournie se trouve dans `Java/sample/`.
+Dans l’archive du SDK Java du fournisseur, consulter `Java/ZKFinger Reader SDK for JAVA_en_V2.pdf` et la démonstration dans `Java/sample/`, selon la version distribuée. Ces fichiers ne sont pas inclus dans ce dépôt.
 
 ## Compiler et tester
 
-Les commandes suivantes sont lancées depuis le dossier parent `Java` du SDK, dans PowerShell :
+Les commandes suivantes sont lancées depuis la racine du dépôt `FingerCapture`, dans PowerShell :
 
 ```powershell
-.\utility\build.ps1
+.\build.ps1
 ```
 
-Le script installe le JAR fourni `lib/ZKFingerReader.jar` dans le dépôt Maven local, compile, exécute les tests et prépare `utility/target/finger-enrollment-1.0.0.zip`. Il télécharge JNA et les outils Maven au premier passage. Les dépendances sont épinglées dans `pom.xml`.
+Le script installe le JAR indiqué par `-SdkJarPath` (par défaut `../lib/ZKFingerReader.jar`) dans le dépôt Maven local, compile, exécute les tests et prépare `target/finger-enrollment-1.0.0.zip`. Maven télécharge les dépendances Java et ses plugins au premier passage ; Maven lui-même doit déjà être installé. Les dépendances sont épinglées dans `pom.xml`.
 
 Pour relancer uniquement les tests après cette première installation :
 
 ```powershell
-mvn -B -ntp -f .\utility\pom.xml test
+mvn -B -ntp test
 ```
 
 La compilation normale vérifie l’interface sans afficher de fenêtres sur le bureau. La vérification native du focus est un **test interactif séparé** : elle ouvre deux fenêtres de test et nécessite de ne pas changer de fenêtre pendant son exécution.
 
 ```powershell
-mvn -B -ntp -f .\utility\pom.xml "-Denrollment.desktopTests=true" "-Dtest=ProgressWindowTest" test
+mvn -B -ntp "-Denrollment.desktopTests=true" "-Dtest=ProgressWindowTest" test
 ```
 
 Ce test mesure les mises à jour de progression après l’ouverture initiale de l’application, avec une fenêtre cible contrôlée. Si Windows refuse l’activation de cette cible ou qu’une autre application interrompt le test, celui-ci est déclaré non concluant (ignoré). Si la fenêtre d’enrôlement prend le focus pendant les mises à jour, le test échoue.
@@ -93,22 +192,22 @@ Ce test mesure les mises à jour de progression après l’ouverture initiale de
 
 ### Depuis VS Code
 
-Ouvrir le dossier `Java` du SDK, puis dans **Exécuter et déboguer**, sélectionner **Enrolement - utilitaire** et appuyer sur **F5**. La tâche préalable lance `utility/build.ps1` ; la configuration utilise les classes compilées par Maven et les JAR du SDK et de JNA dans `utility/target/lib`.
+Ouvrir la racine du dépôt `FingerCapture` avec les extensions Java nécessaires, puis effectuer l’installation et la compilation décrites ci-dessus. Le dépôt ne fournit pas de configuration `.vscode/launch.json` ; le lancement depuis le terminal intégré avec `run.ps1` permet d’utiliser les paramètres natifs documentés.
 
-La configuration **Enrolement - diagnostic SDK sans capture** vérifie uniquement le chargement du SDK et l’ouverture du lecteur, sans capturer d’empreinte ni envoyer de touches.
+Pour déboguer directement `EnrollmentApp.main`, configurer la JVM avec `-Djava.library.path=C:\chemin\vers\les\DLL\x64` et rendre les dépendances natives accessibles dans le `PATH` du processus. Ajouter l’argument `--check-sdk` pour effectuer uniquement le diagnostic sans capture ni touches simulées.
 
-Si le projet avait déjà été ouvert sans ses dépendances, lancer **Java: Clean Java Language Server Workspace** depuis la palette de commandes, puis accepter le rechargement. L’import Maven est activé ; les bibliothèques sont également référencées pour le projet implicite du dossier racine. Ne pas poursuivre un lancement avec des erreurs de compilation.
+Si le projet avait déjà été ouvert sans ses dépendances, importer le projet Maven après l’installation du JAR SDK dans le dépôt local. Au besoin, lancer **Java: Clean Java Language Server Workspace** depuis la palette de commandes, puis accepter le rechargement. Ne pas poursuivre un lancement avec des erreurs de compilation.
 
 ### Depuis PowerShell
 
 ```powershell
-.\utility\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64'
+.\run.ps1 -NativeDirectory 'C:\chemin\vers\les\DLL\x64'
 ```
 
 Si les bibliothèques sont déjà accessibles par le chemin de recherche de Java et le `PATH`, omettre `-NativeDirectory`. Pour sélectionner une autre JVM :
 
 ```powershell
-.\utility\run.ps1 -NativeDirectory 'C:\ZKTeco\x64' -JavaHome 'C:\Program Files\Java\jdk-21'
+.\run.ps1 -NativeDirectory 'C:\ZKTeco\x64' -JavaHome 'C:\Program Files\Java\jdk-21'
 ```
 
 Une **petite application Swing** s’ouvre en haut à droite de l’écran, avec les boutons **Commencer** et **Quitter**. Elle peut être déplacée, redimensionnée ou réduite, et reste au-dessus du navigateur lorsqu’elle est affichée. Elle affiche une consigne à la fois, l’aperçu de l’empreinte et le compteur de lectures acceptées (0 à 3). Les messages longs peuvent défiler sans masquer les boutons. Les mises à jour de progression ne demandent pas le focus au formulaire.
@@ -122,13 +221,13 @@ Le résultat textuel reste affiché jusqu’à l’opération suivante. L’éta
 Diagnostic sans capture ni touches simulées, si les DLL sont déjà accessibles :
 
 ```powershell
-java -jar .\utility\target\finger-enrollment-1.0.0.jar --check-sdk
+java -jar .\target\finger-enrollment-1.0.0.jar --check-sdk
 ```
 
 Ou avec les mêmes paramètres natifs que le lancement normal :
 
 ```powershell
-.\utility\run.ps1 -NativeDirectory 'C:\ZKTeco\x64' -CheckSdk
+.\run.ps1 -NativeDirectory 'C:\ZKTeco\x64' -CheckSdk
 ```
 
 Pour distribuer, décompresser le ZIP sur le PC client et lancer son `run.ps1` avec les mêmes paramètres. Le paquet contient le JAR, ses dépendances, ce guide et le formulaire de test ; le pilote, Java et les DLL du fournisseur restent des prérequis séparés. Vérifier les conditions de redistribution du SDK avant diffusion.
@@ -184,4 +283,4 @@ Les tests automatisés simulent le lecteur et les sorties clavier : ils couvrent
 - **Fenêtre réduite** : la restaurer depuis la barre des tâches avant de démarrer la capture.
 - **Logs nécessaires** : relancer avec `run.ps1 -Console`.
 
-Références techniques : API Windows de JNA et documentation PDF du SDK fournie à la racine du dossier `Java`.
+Références techniques : API Windows de JNA et documentation PDF distribuée avec le SDK Java du fournisseur.
