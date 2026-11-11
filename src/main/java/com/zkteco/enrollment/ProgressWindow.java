@@ -9,11 +9,11 @@ import java.awt.image.BufferedImage;
 
 /** Compact Swing window. All updates run on the EDT and preserve foreground focus. */
 final class ProgressWindow extends JFrame {
-    private static final Color BG = new Color(246, 248, 247);
-    private static final Color PRIMARY = new Color(20, 94, 90);
-    private static final Color TEXT = new Color(28, 40, 38);
-    private static final Color MUTED = new Color(80, 98, 94);
-    private final JProgressBar progress = new JProgressBar(0, 3);
+    private static final Color BG = new Color(244, 247, 251);
+    private static final Color PRIMARY = new Color(16, 112, 105);
+    private static final Color TEXT = new Color(28, 45, 64);
+    private static final Color MUTED = new Color(86, 104, 124);
+    private final JProgressBar progress = new CaptureProgress();
     private final JLabel countLabel = new JLabel();
     private final FingerprintPreview preview = new FingerprintPreview();
     private final JTextArea message = new JTextArea(2, 26);
@@ -31,22 +31,28 @@ final class ProgressWindow extends JFrame {
         });
         getAccessibleContext().setAccessibleName("Enregistrement d'une empreinte");
 
-        JPanel content = new JPanel(new BorderLayout(0, 12));
+        JPanel content = new JPanel(new BorderLayout(0, 16));
         content.setBackground(BG);
-        content.setBorder(new EmptyBorder(14, 14, 14, 14));
-        content.setPreferredSize(new Dimension(360, 400));
+        content.setBorder(new EmptyBorder(20, 20, 20, 20));
+        content.setPreferredSize(new Dimension(400, 540));
 
         JPanel instructions = panel(new BorderLayout(0, 8));
-        JLabel title = new JLabel("Empreinte");
-        title.setFont(font(Font.BOLD, 18));
+        JLabel title = new JLabel("Enregistrer une empreinte");
+        title.setFont(font(Font.BOLD, 20));
         title.setForeground(TEXT);
-        instructions.add(title, BorderLayout.NORTH);
+        JPanel heading = panel(new BorderLayout(0, 4));
+        JLabel brand = new JLabel("FingerCapture");
+        brand.setFont(font(Font.BOLD, 12));
+        brand.setForeground(PRIMARY);
+        heading.add(brand, BorderLayout.NORTH);
+        heading.add(title, BorderLayout.SOUTH);
+        instructions.add(heading, BorderLayout.NORTH);
         message.setEditable(false);
         message.setFocusable(false);
         message.setLineWrap(true);
         message.setWrapStyleWord(true);
-        message.setFont(font(Font.PLAIN, 14));
-        message.setForeground(TEXT);
+        message.setFont(font(Font.PLAIN, 13));
+        message.setForeground(MUTED);
         message.setBackground(BG);
         message.setBorder(new EmptyBorder(0, 0, 0, 8));
         message.getAccessibleContext().setAccessibleName("Consigne et résultat de l'enrôlement");
@@ -54,6 +60,7 @@ final class ProgressWindow extends JFrame {
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         messageScroll.setBorder(null);
+        messageScroll.getViewport().setBackground(BG);
         messageScroll.setPreferredSize(new Dimension(280, 44));
         messageScroll.setMinimumSize(new Dimension(100, 44));
         instructions.add(messageScroll, BorderLayout.CENTER);
@@ -62,21 +69,27 @@ final class ProgressWindow extends JFrame {
         preview.setFont(font(Font.PLAIN, 13));
         content.add(preview, BorderLayout.CENTER);
 
-        JPanel footer = panel(new BorderLayout(0, 10));
+        JPanel footer = panel(new BorderLayout(0, 16));
         progress.setStringPainted(false);
         progress.setBorderPainted(false);
         progress.setBackground(new Color(223, 230, 228));
         progress.setForeground(PRIMARY);
         progress.setFont(font(Font.BOLD, 12));
         progress.setFocusable(false);
-        progress.setPreferredSize(new Dimension(280, 7));
+        progress.setPreferredSize(new Dimension(280, 6));
         progress.getAccessibleContext().setAccessibleName("Nombre de lectures acceptées");
         countLabel.setFont(font(Font.BOLD, 12));
         countLabel.setForeground(MUTED);
         accepted(0);
-        JPanel progressGroup = panel(new BorderLayout(0, 3));
-        progressGroup.add(countLabel, BorderLayout.NORTH);
-        progressGroup.add(progress, BorderLayout.SOUTH);
+        JPanel progressGroup = panel(new BorderLayout(0, 8));
+        JPanel progressHeading = panel(new BorderLayout());
+        JLabel progressTitle = new JLabel("Lectures acceptées");
+        progressTitle.setFont(font(Font.PLAIN, 12));
+        progressTitle.setForeground(MUTED);
+        progressHeading.add(progressTitle, BorderLayout.WEST);
+        progressHeading.add(countLabel, BorderLayout.EAST);
+        progressGroup.add(progressHeading, BorderLayout.NORTH);
+        progressGroup.add(progress, BorderLayout.CENTER);
         footer.add(progressGroup, BorderLayout.NORTH);
 
         JPanel actions = panel(new BorderLayout(12, 0));
@@ -87,7 +100,7 @@ final class ProgressWindow extends JFrame {
         quit.setActionCommand("quit");
         quit.addActionListener(event -> onClose.run());
         actions.add(quit, BorderLayout.EAST);
-        footer.add(actions, BorderLayout.SOUTH);
+        footer.add(actions, BorderLayout.CENTER);
         content.add(footer, BorderLayout.SOUTH);
 
         setContentPane(content);
@@ -112,8 +125,9 @@ final class ProgressWindow extends JFrame {
     void accepted(int count) {
         int value = Math.max(0, Math.min(3, count));
         progress.setValue(value);
-        progress.setString(value + " / 3 lectures");
+        progress.setString(value + " / 3");
         countLabel.setText(progress.getString());
+        progress.getAccessibleContext().setAccessibleDescription(value + " lectures acceptées sur 3");
     }
 
     void showStatus(String text) {
@@ -128,7 +142,26 @@ final class ProgressWindow extends JFrame {
     }
 
     private static Font font(int style, int size) {
-        return UIManager.getFont("Label.font").deriveFont(style, (float) size);
+        return new Font("Segoe UI", style, size);
+    }
+
+    /** Three actual acquisitions, with no suggestion of biometric quality. */
+    private static final class CaptureProgress extends JProgressBar {
+        CaptureProgress() { super(0, 3); setOpaque(false); }
+
+        @Override protected void paintComponent(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            try {
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int gap = 6;
+                for (int i = 0; i < 3; i++) {
+                    int start = i * getWidth() / 3;
+                    int end = (i + 1) * getWidth() / 3;
+                    g.setColor(i < getValue() ? PRIMARY : new Color(215, 225, 233));
+                    g.fillRoundRect(start, 0, Math.max(1, end - start - (i < 2 ? gap : 0)), getHeight(), 6, 6);
+                }
+            } finally { g.dispose(); }
+        }
     }
 
     /** Flat buttons retain Swing's keyboard, accessible name and action handling. */
