@@ -214,7 +214,7 @@ Une **petite application Swing** s’ouvre en haut à droite de l’écran, avec
 
 Le lancement normal utilise `javaw.exe` : aucun terminal de logs n’est nécessaire et vous pouvez fermer le terminal ayant lancé le script. **Fermer la fenêtre Swing ou cliquer sur Quitter arrête l’utilitaire.** Pour afficher les logs lors d’un dépannage, utiliser `run.ps1 -Console` (compatible avec `-NativeDirectory` et `-JavaHome`). `-CheckSdk` conserve toujours la sortie dans le terminal.
 
-La fenêtre affiche également un aperçu en niveaux de gris de chaque nouvelle capture réussie, comme la démonstration du SDK, avec des proportions conservées. Le compteur indique séparément les lectures acceptées après comparaison du doigt. Retirez le doigt entre deux lectures. L’aperçu reste uniquement en mémoire et est effacé à la fin de l’opération, lors d’une annulation ou à la fermeture ; aucun fichier image n’est créé.
+La fenêtre affiche également un aperçu agrandi en niveaux de gris de chaque nouvelle capture réussie, sur fond bleu nuit avec des repères de cadrage. L’image conserve ses proportions et les niveaux de gris du SDK, sans filtre ni superposition sur l’empreinte. Avant la première capture, une icône indique l’attente du lecteur. Les trois segments de progression et le compteur indiquent séparément les lectures acceptées après comparaison du doigt. Retirez le doigt entre deux lectures. L’aperçu reste uniquement en mémoire et est effacé à la fin de l’opération, lors d’une annulation ou à la fermeture ; aucun fichier image n’est créé.
 
 Le résultat textuel reste affiché jusqu’à l’opération suivante. L’état initial indique que le lecteur n’a pas encore été testé : son ouverture est vérifiée à chaque enrôlement. La zone de notification n’est plus nécessaire.
 
