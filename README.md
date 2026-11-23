@@ -4,6 +4,19 @@ FingerCapture est un petit utilitaire Windows qui relie un lecteur d’empreinte
 
 L’application fonctionne localement, indépendamment du site utilisé. Elle ne modifie pas la démonstration Java fournie avec le SDK.
 
+## Version portable Windows avec Java intégré
+
+Sur le poste client, installer le [pilote et les composants natifs ZKTeco](#1-installer-le-pilote-et-les-composants-du-sdk-zkteco), décompresser entièrement `FingerCapture-1.0.0-portable.zip`, puis double-cliquer sur `FingerCapture.exe` dans le dossier extrait. Pour déplacer l’application, copier le dossier `FingerCapture` en entier. La version portable inclut Java et le JAR du SDK. Une version construite avec un JDK x64 est destinée à Windows x64 avec les DLL ZKTeco x64.
+
+Pour générer le paquet sur le poste de développement, utiliser un JDK 17 ou supérieur avec `jpackage.exe` dans le `PATH`. Si le JAR du SDK est déjà enregistré dans Maven, passer directement à `package-windows.ps1`.
+
+```powershell
+.\build.ps1 -SdkJarPath 'C:\chemin\vers\Java\lib\ZKFingerReader.jar'
+.\package-windows.ps1
+```
+
+Distribuer le fichier `target/FingerCapture-1.0.0-portable.zip`. Vérifier les conditions de redistribution du SDK avant diffusion.
+
 ## Démarrage rapide
 
 Après avoir suivi la section [Installation](#installation), depuis la racine du dépôt `FingerCapture`, dans PowerShell :
@@ -23,8 +36,8 @@ Le nom du projet est **FingerCapture**. Les fichiers construits conservent actue
 
 - Windows avec une session utilisateur graphique.
 - Lecteur compatible avec ce SDK, pilote et composants natifs ZKTeco installés depuis le fournisseur. Fermer la démonstration ou tout autre logiciel utilisant le lecteur.
-- Java **17 ou supérieur**, de la même architecture que **libzkfp.dll et ses dépendances** : JVM x64 pour DLL x64, JVM x86 pour DLL x86. Le JAR Java seul ne contient pas ces composants natifs.
-- Maven 3.9+ et un JDK pour compiler. Le poste client a seulement besoin de Java et des composants natifs.
+- Pour le lancement du JAR, Java **17 ou supérieur**, de la même architecture que **libzkfp.dll et ses dépendances** : JVM x64 pour DLL x64, JVM x86 pour DLL x86. La version portable fournit son propre environnement Java.
+- Maven 3.9+ et un JDK pour compiler.
 
 Le JAR ZKTeco utilise JNI pour accéder à `libzkfp`. Ne pas confondre `libzkfp.dll` avec `libzkfpcsharp.dll`. Le dossier natif doit également contenir ou permettre de trouver les DLL dépendantes et les runtimes exigés par l’installation ZKTeco.
 
@@ -34,7 +47,7 @@ Le JAR ZKTeco utilise JNI pour accéder à `libzkfp`. Ne pas confondre `libzkfp.
 
 **Oui, les composants natifs du SDK doivent être installés sur chaque poste qui utilise le lecteur.** Compiler le projet ou ajouter le JAR Java ne les installe pas. Pour développer, il faut aussi récupérer le SDK Java auprès de ZKTeco ou du fournisseur du lecteur.
 
-Pour le paquet **ZKFinger Standard SDK 5.3.0.33**, l’installateur à lancer est **`setup.exe` à la racine du paquet**, intitulé « Fingerprint Reader Standard Driver Setup » (version `5.3.0.33`). C’est le point d’entrée pour installer les composants ZKTeco sur le poste client ; il n’est normalement pas nécessaire de copier les DLL à la main. Java reste un prérequis séparé.
+Pour le paquet **ZKFinger Standard SDK 5.3.0.33**, l’installateur à lancer est **`setup.exe` à la racine du paquet**, intitulé « Fingerprint Reader Standard Driver Setup » (version `5.3.0.33`). C’est le point d’entrée pour installer les composants ZKTeco sur le poste client ; il n’est normalement pas nécessaire de copier les DLL à la main.
 
 | Élément | Poste de développement | Poste client utilisant le ZIP |
 | --- | --- | --- |
@@ -113,6 +126,8 @@ Il n’effectue aucune capture et n’envoie aucune touche. En cas de code `-1` 
 Après un diagnostic réussi, lancer `./run.ps1` avec le même `-NativeDirectory` si nécessaire, puis utiliser `example-form.html` pour vérifier les trois lectures et l’insertion.
 
 ### Installer sur un poste client
+
+Pour lancer `FingerCapture.exe` avec Java intégré, suivre la section [Version portable Windows](#version-portable-windows-avec-java-intégré). Les étapes suivantes concernent le paquet `finger-enrollment-1.0.0.zip`.
 
 1. Installer Java 17 ou supérieur avec Swing, puis lancer `ZKFinger Standard SDK 5.3.0.33\setup.exe` pour installer les composants ZKTeco. Suivre les consignes de l’installateur et utiliser un lecteur compatible avec ce SDK.
 2. Décompresser entièrement `target/finger-enrollment-1.0.0.zip`, produit par la compilation. Conserver le dossier `lib` du paquet à côté du JAR principal.
